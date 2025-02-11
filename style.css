@@ -1,0 +1,31 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+.chart-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+.axis-label {
+    fill: black;
+    font-size: 12px;
+    font-weight: bold;
+}
+.light-period {
+    fill: rgba(255, 213, 37, 0.3);
+}
+.dark-period {
+    fill: rgba(169, 169, 169, 0.3);
+}
+.estrus-line {
+    stroke: red;
+    stroke-width: 1.5;
+    fill: none;
+}
+.non-estrus-line {
+    stroke: blue;
+    stroke-width: 1.5;
+    fill: none;
+}
