@@ -7,6 +7,41 @@ const radius = Math.min(width, height) / 2 - margin;
 // 1440 total minutes in a day
 const totalMinutes = 1440;
 
+// Add state variables for visibility toggles
+let showEstrus = true;
+let showNonEstrus = true;
+let brushSelection = null;
+
+// Update visibility function
+function updateVisibility() {
+  d3.select(".estrus-line").style("opacity", showEstrus ? 1 : 0);
+  d3.selectAll(".estrus-circle").style("opacity", showEstrus ? 0.7 : 0);
+  
+  d3.select(".non-estrus-line").style("opacity", showNonEstrus ? 1 : 0);
+  d3.selectAll(".non-estrus-circle").style("opacity", showNonEstrus ? 0.7 : 0);
+}
+
+// Initialize toggle buttons
+document.addEventListener('DOMContentLoaded', () => {
+  const estrusBtn = document.getElementById('toggle-estrus');
+  const nonEstrusBtn = document.getElementById('toggle-non-estrus');
+  
+  estrusBtn.classList.add('active');
+  nonEstrusBtn.classList.add('active');
+  
+  estrusBtn.addEventListener('click', () => {
+    showEstrus = !showEstrus;
+    estrusBtn.classList.toggle('active');
+    updateVisibility();
+  });
+  
+  nonEstrusBtn.addEventListener('click', () => {
+    showNonEstrus = !showNonEstrus;
+    nonEstrusBtn.classList.toggle('active');
+    updateVisibility();
+  });
+});
+
 /**
  * Convert a minute-of-day into "HH:MM AM/PM"
  */
@@ -54,6 +89,7 @@ Promise.all([
     .append("g")
     // Move to the center
     .attr("transform", `translate(${width / 2}, ${height / 2})`);
+
 
   // Define radial scale: activity -> radius
   const rScale = d3.scaleLinear()
@@ -157,7 +193,20 @@ Promise.all([
     .map((activity, i) => ({ activity, i, type: "Non-Estrus" }))
     .filter(d => d.i % sampleRate === 0);
 
-  // Circles for estrus
+  // Helper function for tooltip positioning and content
+function showTooltip(event, d) {
+    const timeStr = minuteToTime(d.i);
+    tooltip.html(`
+      <strong>Type:</strong> ${d.type}<br/>
+      <strong>Time:</strong> ${timeStr}<br/>
+      <strong>Activity:</strong> ${d.activity.toFixed(2)}
+    `)
+      .style("left", (event.pageX + 10) + "px")
+      .style("top", (event.pageY - 28) + "px")
+      .style("opacity", 0.9);
+  }
+  
+  // Modify the circle creation for estrus
   svg.selectAll(".estrus-circle")
     .data(estrusSample)
     .enter()
@@ -168,26 +217,10 @@ Promise.all([
     .attr("cy", d => polarToCartesian(d.i, d.activity).y)
     .style("fill", "red")
     .style("cursor", "pointer")
-    .on("mouseover", function(event, d) {
-      d3.select(this).transition().duration(200).attr("r", 6);
-      tooltip.transition().duration(200).style("opacity", 0.9);
-
-      // Convert minute -> HH:MM
-      const timeStr = minuteToTime(d.i);
-      tooltip.html(`
-        <strong>Type:</strong> ${d.type}<br/>
-        <strong>Time:</strong> ${timeStr}<br/>
-        <strong>Activity:</strong> ${d.activity.toFixed(2)}
-      `)
-        .style("left", (event.pageX + 10) + "px")
-        .style("top", (event.pageY - 28) + "px");
-    })
-    .on("mouseout", function() {
-      d3.select(this).transition().duration(200).attr("r", 3);
-      tooltip.transition().duration(200).style("opacity", 0);
-    });
-
-  // Circles for non-estrus
+    .style("pointer-events", "all") // Ensure circles capture events
+    ;
+  
+  // Modify the circle creation for non-estrus
   svg.selectAll(".non-estrus-circle")
     .data(nonEstrusSample)
     .enter()
@@ -198,25 +231,8 @@ Promise.all([
     .attr("cy", d => polarToCartesian(d.i, d.activity).y)
     .style("fill", "blue")
     .style("cursor", "pointer")
-    .on("mouseover", function(event, d) {
-      d3.select(this).transition().duration(200).attr("r", 6);
-      tooltip.transition().duration(200).style("opacity", 0.9);
-
-      // Convert minute -> HH:MM
-      const timeStr = minuteToTime(d.i);
-      tooltip.html(`
-        <strong>Type:</strong> ${d.type}<br/>
-        <strong>Time:</strong> ${timeStr}<br/>
-        <strong>Activity:</strong> ${d.activity.toFixed(2)}
-      `)
-        .style("left", (event.pageX + 10) + "px")
-        .style("top", (event.pageY - 28) + "px");
-    })
-    .on("mouseout", function() {
-      d3.select(this).transition().duration(200).attr("r", 3);
-      tooltip.transition().duration(200).style("opacity", 0);
-    });
-
+    .style("pointer-events", "all") // Ensure circles capture events
+    ;
   // ---- ADD A VERTICAL ENERGY-LEVEL SCALE ----
   //  from center (0,0) down to (0, radius).
   //  We'll add ticks and a label "Energy (units)" at the bottom.
@@ -292,6 +308,116 @@ Promise.all([
     .text(d => d.label)
     .attr("font-size", "14px")
     .attr("fill", "black");
+
+// Add brush container (move to after all visualization elements)
+const brushContainer = svg.append("g")
+    .attr("class", "brush");
+
+function brushed(event) {
+    brushSelection = event.selection;
+    if (!brushSelection) {
+        // Clear selection
+        svg.selectAll("circle").classed("selected", false);
+        updateDataTable([]);
+        return;
+    }
+        
+    // Transform brush coordinates to our coordinate system
+    const [[x0, y0], [x1, y1]] = brushSelection;
+        
+    // Select points within brush
+    const selectedPoints = [];
+    svg.selectAll("circle").each(function(d) {
+        const circle = d3.select(this);
+        const cx = +circle.attr("cx");
+        const cy = +circle.attr("cy");
+            
+        const selected = cx >= (x0 - width/2) && cx <= (x1 - width/2) && 
+                cy >= (y0 - height/2) && cy <= (y1 - height/2);
+        circle.classed("selected", selected);
+            
+        if (selected) {
+            selectedPoints.push({
+                Time: minuteToTime(d.i),
+                Type: d.type,
+                Activity: d.activity.toFixed(2)
+            });
+        }
+    });
+    
+        updateDataTable(selectedPoints);
+    }
+    function updateDataTable(selectedPoints) {
+        const container = d3.select("#selected-data");
+        container.html(""); // Clear previous content
+    
+        if (!selectedPoints || selectedPoints.length === 0) {
+            container.append("p")
+                .text("No data points selected");
+            return;
+        }
+    
+        const table = container.append("table");
+        
+        // Add headers
+        const headers = Object.keys(selectedPoints[0]);
+        table.append("thead")
+            .append("tr")
+            .selectAll("th")
+            .data(headers)
+            .enter()
+            .append("th")
+            .text(d => d);
+    
+        // Add rows
+        const rows = table.append("tbody")
+            .selectAll("tr")
+            .data(selectedPoints)
+            .enter()
+            .append("tr");
+    
+        // Add cells
+        rows.selectAll("td")
+            .data(d => Object.values(d))
+            .enter()
+            .append("td")
+            .text(d => d);
+    }
+// Create brush with pointer events handling
+const brush = d3.brush()
+    .extent([[-width/2, -height/2], [width/2, height/2]])
+    .on("start brush end", brushed);
+
+brushContainer.call(brush);
+
+// Make sure overlay doesn't block tooltips
+brushContainer.select(".overlay")
+    .style("pointer-events", "painted");
+
+// Modify circle interactions to work with both brush and tooltips
+svg.selectAll("circle")
+    .style("pointer-events", "all")
+    .on("mouseover", function(event, d) {
+        if (!event.target.classList.contains("brush")) {
+            d3.select(this)
+                .transition()
+                .duration(200)
+                .attr("r", 6);
+            showTooltip(event, d);
+        }
+    })
+    .on("mouseout", function() {
+        d3.select(this)
+            .transition()
+            .duration(200)
+            .attr("r", 3);
+        tooltip.transition()
+            .duration(200)
+            .style("opacity", 0);
+    });
+
+// Make sure visual elements are above brush overlay but can still be interacted with
+svg.selectAll(".dots, .overlay ~ *").raise();
 
 }).catch(error => {
   console.error("Error loading the data: ", error);
