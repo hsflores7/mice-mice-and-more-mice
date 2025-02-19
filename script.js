@@ -184,7 +184,6 @@ Promise.all([
     });
 
     // ---- Polar to Cartesian Conversion ----
-    // Compute the angle from the data point's index.
     function polarToCartesian(d, i) {
         const angle = getAngle(i);
         return {
@@ -243,7 +242,6 @@ Promise.all([
         .style("cursor", "pointer");
 
     // ---- VERTICAL ENERGY-LEVEL SCALE (Axis with Labels) ----
-    // Draw a vertical line from center to the edge.
     svg.append("line")
         .attr("x1", 0)
         .attr("y1", 0)
@@ -252,19 +250,16 @@ Promise.all([
         .attr("stroke", "black")
         .attr("stroke-width", 1);
 
-    // Draw tick marks and labels along this vertical axis.
     const tickCount = 5;
     for (let i = 0; i <= tickCount; i++) {
         const level = (i / tickCount) * maxActivity;
         const yPos = rScale(level);
-        // Draw a tick line
         svg.append("line")
             .attr("x1", -5)
             .attr("x2", 0)
             .attr("y1", yPos)
             .attr("y2", yPos)
             .attr("stroke", "black");
-        // Add text label
         svg.append("text")
             .attr("x", -10)
             .attr("y", yPos + 4)
@@ -272,13 +267,12 @@ Promise.all([
             .attr("font-size", 12)
             .text(level.toFixed(0));
     }
-    // Label for the vertical axis.
     svg.append("text")
         .attr("x", 0)
         .attr("y", radius + 35)
         .attr("text-anchor", "middle")
         .attr("font-size", 14)
-    // .text("Activity Level");
+        .text("Activity Level");
 
     // ---- LEGEND (Example) ----
     const legendData = [
@@ -327,8 +321,12 @@ Promise.all([
         }
         const [[x0, y0], [x1, y1]] = brushSelection;
         const selectedPoints = [];
-        // Only consider data circles.
+        // Only consider data circles (exclude grid circles).
         svg.selectAll(".estrus-circle, .non-estrus-circle").each(function (d) {
+            // Only include if the point is toggled on.
+            if ((d.type === "Estrus" && !showEstrus) || (d.type === "Non-Estrus" && !showNonEstrus)) {
+                return;
+            }
             const circle = d3.select(this);
             const cx = +circle.attr("cx");
             const cy = +circle.attr("cy");
@@ -349,9 +347,14 @@ Promise.all([
     svg.selectAll("circle").raise();
 
     // ---- TOOLTIP INTERACTIONS ----
+    // Attach events only to the data circles.
     svg.selectAll(".estrus-circle, .non-estrus-circle")
         .style("pointer-events", "all")
         .on("mouseover", function (event, d) {
+            // Only show tooltip if the point is toggled on.
+            if ((d.type === "Estrus" && !showEstrus) || (d.type === "Non-Estrus" && !showNonEstrus)) {
+                return;
+            }
             d3.select(this)
                 .transition()
                 .duration(200)
@@ -383,6 +386,7 @@ Promise.all([
             updateVisibility();
         });
 
+    // Set initial active classes.
     d3.select("#toggle-estrus").classed("active", true);
     d3.select("#toggle-non-estrus").classed("active", true);
     updateVisibility();
