@@ -269,7 +269,7 @@ Promise.all([
     }
     svg.append("text")
         .attr("x", 0)
-        .attr("y", radius + 35)
+        .attr("y", radius + 50)
         .attr("text-anchor", "middle")
         .attr("font-size", 14)
         .text("Activity Level");

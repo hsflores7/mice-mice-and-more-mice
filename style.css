@@ -148,3 +148,7 @@ circle.selected {
     stroke: #ff6b6b;
     stroke-width: 2px;
 }
+
+a {
+  font-size: 4em;
+}
