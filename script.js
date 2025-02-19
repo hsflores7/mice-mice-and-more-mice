@@ -38,7 +38,7 @@ function minuteToTime(minuteOfDay) {
 /**
  * Compute the angle in radians for a given index.
  * We assume data points are evenly spaced over a day (1440 minutes).
- * The top of the circle corresponds to 0 minutes (i.e. -π/2 radians).
+ * The top (0 minutes) corresponds to -π/2 radians.
  */
 function getAngle(i) {
     return -Math.PI / 2 + (2 * Math.PI * i) / totalMinutes;
@@ -136,24 +136,22 @@ Promise.all([
         .domain([0, maxActivity])
         .range([0, radius]);
 
-    // ---- DARK PERIOD ARC (TOP HALF) ----
     svg.append("path")
         .attr("class", "dark-period")
         .attr("d", d3.arc()
             .innerRadius(0)
             .outerRadius(radius)
-            .startAngle(-Math.PI / 2)
-            .endAngle(Math.PI / 2)
+            .startAngle(-2 * Math.PI)
+            .endAngle(-Math.PI)
         );
 
-    // ---- LIGHT PERIOD ARC (BOTTOM HALF) ----
     svg.append("path")
         .attr("class", "light-period")
         .attr("d", d3.arc()
             .innerRadius(0)
             .outerRadius(radius)
-            .startAngle(Math.PI / 2)
-            .endAngle((3 * Math.PI) / 2)
+            .startAngle(2 * Math.PI)
+            .endAngle(Math.PI)
         );
 
     // Draw radial grid circles with class "grid-circle" and disable pointer events.
@@ -244,7 +242,8 @@ Promise.all([
         .style("fill", "blue")
         .style("cursor", "pointer");
 
-    // ---- VERTICAL ENERGY-LEVEL SCALE (example axis) ----
+    // ---- VERTICAL ENERGY-LEVEL SCALE (Axis with Labels) ----
+    // Draw a vertical line from center to the edge.
     svg.append("line")
         .attr("x1", 0)
         .attr("y1", 0)
@@ -252,6 +251,34 @@ Promise.all([
         .attr("y2", radius)
         .attr("stroke", "black")
         .attr("stroke-width", 1);
+
+    // Draw tick marks and labels along this vertical axis.
+    const tickCount = 5;
+    for (let i = 0; i <= tickCount; i++) {
+        const level = (i / tickCount) * maxActivity;
+        const yPos = rScale(level);
+        // Draw a tick line
+        svg.append("line")
+            .attr("x1", -5)
+            .attr("x2", 0)
+            .attr("y1", yPos)
+            .attr("y2", yPos)
+            .attr("stroke", "black");
+        // Add text label
+        svg.append("text")
+            .attr("x", -10)
+            .attr("y", yPos + 4)
+            .attr("text-anchor", "end")
+            .attr("font-size", 12)
+            .text(level.toFixed(0));
+    }
+    // Label for the vertical axis.
+    svg.append("text")
+        .attr("x", 0)
+        .attr("y", radius + 35)
+        .attr("text-anchor", "middle")
+        .attr("font-size", 14)
+    // .text("Activity Level");
 
     // ---- LEGEND (Example) ----
     const legendData = [
@@ -300,7 +327,7 @@ Promise.all([
         }
         const [[x0, y0], [x1, y1]] = brushSelection;
         const selectedPoints = [];
-        // Only consider data circles, not grid circles.
+        // Only consider data circles.
         svg.selectAll(".estrus-circle, .non-estrus-circle").each(function (d) {
             const circle = d3.select(this);
             const cx = +circle.attr("cx");
@@ -322,7 +349,6 @@ Promise.all([
     svg.selectAll("circle").raise();
 
     // ---- TOOLTIP INTERACTIONS ----
-    // Attach events only to the data circles.
     svg.selectAll(".estrus-circle, .non-estrus-circle")
         .style("pointer-events", "all")
         .on("mouseover", function (event, d) {
@@ -357,7 +383,6 @@ Promise.all([
             updateVisibility();
         });
 
-    // Set initial active classes.
     d3.select("#toggle-estrus").classed("active", true);
     d3.select("#toggle-non-estrus").classed("active", true);
     updateVisibility();

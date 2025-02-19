@@ -1,6 +1,18 @@
 body {
     font-family: Arial, sans-serif;
     text-align: center;
+
+    /* Fallback color for older browsers */
+    background-color: #ffffff;
+
+    /* A gentle gradient from white to light gray */
+    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+
+    /* Ensure the background covers the full height */
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+
 }
 
 /* Flex container to hold both the chart and the table side-by-side */
