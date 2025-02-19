@@ -377,6 +377,8 @@ Promise.all([
             showEstrus = !showEstrus;
             d3.select(this).classed("active", showEstrus);
             updateVisibility();
+            updateDataTable();
+            brushContainer.call(brush.move, null);
         });
 
     d3.select("#toggle-non-estrus")
@@ -384,6 +386,8 @@ Promise.all([
             showNonEstrus = !showNonEstrus;
             d3.select(this).classed("active", showNonEstrus);
             updateVisibility();
+            updateDataTable();
+            brushContainer.call(brush.move, null);
         });
 
     // Set initial active classes.
