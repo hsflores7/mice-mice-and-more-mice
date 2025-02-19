@@ -150,5 +150,9 @@ circle.selected {
 }
 
 a {
-  font-size: 4em;
+  font-size: 1.5em;
+}
+
+div.controls {
+  padding-top : 20px;
 }
